@@ -36,7 +36,7 @@ export default function InboxPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<any>(null)
 
-  // Helper function to sort messages chronologically
+  // Helper function to sort messages chronologically (oldest first, newest last)
   const sortMessages = useCallback((messageList: Message[]) => {
     return messageList.sort((a, b) => {
       const timeA = new Date(a.created_at).getTime()
@@ -99,16 +99,16 @@ export default function InboxPage() {
       const data = await response.json()
       console.log('InboxPage: Messages data received:', data)
       
-      // Sort messages chronologically before setting state
-      const sortedMessages = sortMessages(data)
-      setMessages(sortedMessages)
+      // Messages are already sorted by the API (oldest first, newest last)
+      // Just set them directly without additional sorting
+      setMessages(data)
     } catch (error) {
       console.error('InboxPage: Error fetching messages:', error)
       setMessages([])
     } finally {
       setRefreshing(false)
     }
-  }, [selectedPage, sortMessages])
+  }, [selectedPage])
 
   const refreshMessages = useCallback(async () => {
     if (selectedConversation) {
@@ -172,8 +172,8 @@ export default function InboxPage() {
         created_at: new Date().toISOString()
       }
       
-      // Add the new message to the messages list and sort chronologically
-      const updatedMessages = sortMessages([...messages, tempMessage])
+      // Add the new message to the end of the messages list (newest last)
+      const updatedMessages = [...messages, tempMessage]
       setMessages(updatedMessages)
       
       // Update conversation in list with new message

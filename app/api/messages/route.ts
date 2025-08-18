@@ -58,14 +58,16 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    // Sort messages by creation time (oldest first, newest last)
+    // Facebook returns messages in reverse chronological order (newest first)
+    // We need chronological order (oldest first, newest last)
+    // So we sort by time and then reverse the array
     const sortedMessages = transformedMessages.sort((a: TransformedMessage, b: TransformedMessage) => {
       const timeA = new Date(a.created_at).getTime()
       const timeB = new Date(b.created_at).getTime()
       return timeA - timeB // Ascending order (oldest first)
-    })
+    }).reverse() // Reverse to get oldest first, newest last
     
-    console.log('Transformed and sorted messages:', JSON.stringify(sortedMessages, null, 2))
+    console.log('Transformed and sorted messages (oldest first, newest last):', JSON.stringify(sortedMessages, null, 2))
     
     return NextResponse.json(sortedMessages)
   } catch (error) {

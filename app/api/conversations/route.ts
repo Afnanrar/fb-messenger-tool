@@ -12,13 +12,16 @@ export async function GET(request: NextRequest) {
     console.log('Conversations API called with:')
     console.log('- Access token exists:', !!accessToken)
     console.log('- Page ID:', pageId)
-    console.log('- All cookies:', Array.from(cookies.entries()).map(([name, value]) => ({ name, value: value.value })))
+    
+    // Log cookies using getAll() method
+    const allCookies = cookies.getAll()
+    console.log('- All cookies:', allCookies.map(cookie => ({ name: cookie.name, value: cookie.value })))
     
     if (!accessToken) {
       console.error('No access token found in cookies')
       return NextResponse.json({ 
         error: 'No access token found',
-        cookies: Array.from(cookies.entries()).map(([name, value]) => ({ name, value: value.value }))
+        cookies: allCookies.map(cookie => ({ name: cookie.name, value: cookie.value }))
       }, { status: 401 })
     }
     

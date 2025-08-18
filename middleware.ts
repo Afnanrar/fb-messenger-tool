@@ -3,7 +3,10 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   console.log('Middleware called for:', request.nextUrl.pathname)
-  console.log('Cookies in middleware:', Array.from(request.cookies.entries()).map(([name, value]) => ({ name, value: value.value })))
+  
+  // Log cookies using getAll() method
+  const allCookies = request.cookies.getAll()
+  console.log('Cookies in middleware:', allCookies.map(cookie => ({ name: cookie.name, value: cookie.value })))
   
   // Check if user is authenticated for protected routes
   if (request.nextUrl.pathname.startsWith('/dashboard')) {

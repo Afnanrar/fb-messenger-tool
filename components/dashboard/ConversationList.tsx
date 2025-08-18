@@ -23,23 +23,36 @@ interface ConversationListProps {
 export function ConversationList({ conversations, selectedId, onSelect }: ConversationListProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.last_message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.participant_id.includes(searchTerm)
-  )
+  const filteredConversations = conversations.filter(conv => {
+    const message = conv.last_message || ''
+    const participant = conv.participant_id || ''
+    
+    return message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           participant.toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    if (!dateString) return 'Unknown'
+    
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Invalid date'
+      
+      const now = new Date()
+      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
 
-    if (diffInHours < 1) return 'Just now'
-    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`
-    return date.toLocaleDateString()
+      if (diffInHours < 1) return 'Just now'
+      if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`
+      if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`
+      return date.toLocaleDateString()
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error)
+      return 'Invalid date'
+    }
   }
 
   const truncateMessage = (message: string, maxLength: number = 50) => {
+    if (!message) return 'No message'
     return message.length > maxLength ? message.substring(0, maxLength) + '...' : message
   }
 
@@ -83,7 +96,7 @@ export function ConversationList({ conversations, selectedId, onSelect }: Conver
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {conversation.participant_id}
+                        {conversation.participant_id || 'Unknown User'}
                       </p>
                       {conversation.unread_count > 0 && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

@@ -154,6 +154,12 @@ export default function InboxPage() {
     setError(null)
   }
 
+  // Safe function to get initials from participant ID
+  const getInitials = (participantId: string) => {
+    if (!participantId) return '?'
+    return participantId.charAt(0).toUpperCase()
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -211,15 +217,15 @@ export default function InboxPage() {
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-blue-600">
-                      {selectedConversation.participant_id.charAt(0).toUpperCase()}
+                      {getInitials(selectedConversation.participant_id)}
                     </span>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">
-                      {selectedConversation.participant_id}
+                      {selectedConversation.participant_id || 'Unknown User'}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {selectedConversation.pages?.name}
+                      {selectedConversation.pages?.name || 'Unknown Page'}
                     </p>
                   </div>
                 </div>

@@ -106,7 +106,7 @@ export default function InboxPage() {
           </div>
           <PageSelector
             onPageSelect={setSelectedPage}
-            selectedPage={selectedPage}
+            selectedPage={selectedPage || undefined}
           />
         </div>
       </div>

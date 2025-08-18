@@ -59,7 +59,7 @@ export default function DashboardPage() {
         
         <PageSelector
           onPageSelect={setSelectedPage}
-          selectedPage={selectedPage}
+          selectedPage={selectedPage || undefined}
         />
       </div>
 

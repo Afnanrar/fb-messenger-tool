@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PageSelector } from '@/components/dashboard/PageSelector'
 import { BroadcastForm } from '@/components/dashboard/BroadcastForm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,13 +28,7 @@ export default function BroadcastPage() {
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (selectedPage) {
-      fetchBroadcasts()
-    }
-  }, [selectedPage])
-
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = useCallback(async () => {
     if (!selectedPage) return
     
     setLoading(true)
@@ -69,7 +63,13 @@ export default function BroadcastPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPage])
+
+  useEffect(() => {
+    if (selectedPage) {
+      fetchBroadcasts()
+    }
+  }, [selectedPage, fetchBroadcasts])
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -118,7 +118,7 @@ export default function BroadcastPage() {
           </div>
           <PageSelector
             onPageSelect={setSelectedPage}
-            selectedPage={selectedPage}
+            selectedPage={selectedPage || undefined}
           />
         </div>
       </div>
@@ -168,7 +168,7 @@ export default function BroadcastPage() {
                                 <Users className="w-4 h-4" />
                                 <span>{broadcast.recipient_count} recipients</span>
                               </div>
-                              <div className="flex items-center space-x-1">
+                              <div className="flex items-center space-x-2">
                                 <CheckCircle className="w-4 h-4 text-green-600" />
                                 <span>{broadcast.sent_count} sent</span>
                               </div>

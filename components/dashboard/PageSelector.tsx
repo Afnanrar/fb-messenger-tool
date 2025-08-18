@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ChevronDown, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -20,11 +20,7 @@ export function PageSelector({ onPageSelect, selectedPage }: PageSelectorProps) 
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchPages()
-  }, [])
-
-  const fetchPages = async () => {
+  const fetchPages = useCallback(async () => {
     try {
       const response = await fetch('/api/pages')
       const data = await response.json()
@@ -39,7 +35,11 @@ export function PageSelector({ onPageSelect, selectedPage }: PageSelectorProps) 
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPage, onPageSelect])
+
+  useEffect(() => {
+    fetchPages()
+  }, [fetchPages])
 
   const handlePageSelect = (page: Page) => {
     onPageSelect(page)

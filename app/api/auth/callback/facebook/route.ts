@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   
   if (!code) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
     return NextResponse.redirect(`${baseUrl}/login?error=no_code`)
   }
   
@@ -14,13 +14,16 @@ export async function GET(request: NextRequest) {
     console.log('Facebook OAuth callback received with code:', code)
     
     // Exchange code for access token
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
+    const redirectUri = `${baseUrl}/api/auth/callback/facebook`
+    
     const tokenResponse = await axios.get(
       'https://graph.facebook.com/v18.0/oauth/access_token',
       {
         params: {
           client_id: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
           client_secret: process.env.FACEBOOK_APP_SECRET,
-          redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/facebook`,
+          redirect_uri: redirectUri,
           code
         }
       }
@@ -40,53 +43,62 @@ export async function GET(request: NextRequest) {
       }
     )
     
-    console.log('User info received:', userResponse.data)
     const userData = userResponse.data
+    console.log('User data received:', userData)
     
-    // For development: Skip Supabase and use mock user ID
-    const mockUserId = 'dev-user-' + userData.id
+    // Check if we're in development mode
+    if (process.env.NEXT_PUBLIC_DEV_MODE === 'true') {
+      console.log('Development mode: Setting mock cookies')
+      
+      // Set cookies for development mode
+      const response = NextResponse.redirect(`${baseUrl}/dashboard`)
+      response.cookies.set('fb_user_id', userData.id, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      response.cookies.set('fb_access_token', access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      
+      return response
+    }
     
-    // Store access token in session
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
+    // TODO: In production, save user to Supabase and set proper session
+    console.log('Production mode: Would save user to Supabase')
+    
+    // For now, redirect to dashboard with cookies
     const response = NextResponse.redirect(`${baseUrl}/dashboard`)
-    
-    // Set cookies for development
-    response.cookies.set('fb_access_token', access_token, {
+    response.cookies.set('fb_user_id', userData.id, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7 // 7 days
     })
-    response.cookies.set('user_id', mockUserId, {
+    response.cookies.set('fb_access_token', access_token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7
+      maxAge: 60 * 60 * 24 * 7 // 7 days
     })
     
-    // Also store user data in cookies for development
-    response.cookies.set('user_name', userData.name || 'Unknown User', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7
-    })
-    
-    console.log('Redirecting to dashboard with cookies set')
     return response
+    
   } catch (error) {
     console.error('Facebook auth error:', error)
     
-    // Log detailed error for debugging
+    // Log detailed error information
     if (error && typeof error === 'object' && 'response' in error) {
-      const axiosError = error as any
-      console.error('Error response:', axiosError.response?.data)
-      console.error('Error status:', axiosError.response?.status)
-      console.error('Error headers:', axiosError.response?.headers)
+      console.error('Error response:', (error as any).response.data)
+      console.error('Error status:', (error as any).response.status)
+      console.error('Error headers:', (error as any).response.headers)
     }
     
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed&details=${encodeURIComponent(errorMessage)}`)
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed`)
   }
 }

@@ -17,9 +17,26 @@ export async function GET(request: NextRequest) {
     const facebookClient = new FacebookClient(accessToken)
     const pages = await facebookClient.getPages()
     
-    console.log('Facebook pages fetched:', pages)
+    console.log('Raw Facebook pages response:', JSON.stringify(pages, null, 2))
     
-    return NextResponse.json(pages)
+    // Transform the data to match our expected format
+    const transformedPages = pages.map((page: any) => {
+      console.log('Processing page:', page)
+      
+      return {
+        id: page.id || page.page_id || `page_${Date.now()}`,
+        name: page.name || page.page_name || 'Unknown Page',
+        category: page.category || page.page_category || 'Business',
+        facebook_page_id: page.id || page.page_id || page.id,
+        access_token: page.access_token || 'no_token',
+        // Store raw data for debugging
+        _raw: page
+      }
+    })
+    
+    console.log('Transformed pages:', JSON.stringify(transformedPages, null, 2))
+    
+    return NextResponse.json(transformedPages)
   } catch (error) {
     console.error('Error fetching pages:', error)
     return NextResponse.json({ error: 'Failed to fetch pages' }, { status: 500 })
@@ -40,9 +57,26 @@ export async function POST(request: NextRequest) {
     const facebookClient = new FacebookClient(accessToken)
     const pages = await facebookClient.getPages()
     
-    console.log('Facebook pages synced:', pages)
+    console.log('Raw Facebook pages response:', JSON.stringify(pages, null, 2))
     
-    return NextResponse.json(pages)
+    // Transform the data to match our expected format
+    const transformedPages = pages.map((page: any) => {
+      console.log('Processing page:', page)
+      
+      return {
+        id: page.id || page.page_id || `page_${Date.now()}`,
+        name: page.name || page.page_name || 'Unknown Page',
+        category: page.category || page.page_category || 'Business',
+        facebook_page_id: page.id || page.page_id || page.id,
+        access_token: page.access_token || 'no_token',
+        // Store raw data for debugging
+        _raw: page
+      }
+    })
+    
+    console.log('Transformed pages:', JSON.stringify(transformedPages, null, 2))
+    
+    return NextResponse.json(transformedPages)
   } catch (error) {
     console.error('Error syncing pages:', error)
     return NextResponse.json({ error: 'Failed to sync pages' }, { status: 500 })

@@ -30,55 +30,105 @@ export default function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<any>(null)
 
   useEffect(() => {
+    console.log('InboxPage: selectedPage changed:', selectedPage)
     if (selectedPage) {
       fetchConversations()
     }
   }, [selectedPage])
 
   useEffect(() => {
-    if (selectedConversation) {
+    console.log('InboxPage: selectedConversation changed:', selectedConversation)
+    if (selectedConversation && selectedPage) {
       fetchMessages(selectedConversation.id)
     }
-  }, [selectedConversation])
+  }, [selectedConversation, selectedPage])
 
   const fetchConversations = async () => {
+    if (!selectedPage) {
+      console.log('InboxPage: No page selected, skipping conversation fetch')
+      return
+    }
+    
     try {
-      const response = await fetch('/api/conversations')
+      console.log('InboxPage: Fetching conversations for page:', selectedPage.id)
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/conversations?pageId=${selectedPage.id}`)
+      console.log('InboxPage: Conversations response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('InboxPage: Conversations API error:', errorData)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`)
+      }
+      
       const data = await response.json()
+      console.log('InboxPage: Conversations data received:', data)
       setConversations(data)
-      setLoading(false)
     } catch (error) {
-      console.error('Error fetching conversations:', error)
+      console.error('InboxPage: Error fetching conversations:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch conversations')
+      setConversations([])
+    } finally {
       setLoading(false)
     }
   }
 
   const fetchMessages = async (conversationId: string) => {
+    if (!selectedPage) {
+      console.log('InboxPage: No page selected, skipping message fetch')
+      return
+    }
+    
     try {
-      const response = await fetch(`/api/messages?conversationId=${conversationId}`)
+      console.log('InboxPage: Fetching messages for conversation:', conversationId, 'page:', selectedPage.id)
+      const response = await fetch(`/api/messages?conversationId=${conversationId}&pageId=${selectedPage.id}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('InboxPage: Messages API error:', errorData)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`)
+      }
+      
       const data = await response.json()
+      console.log('InboxPage: Messages data received:', data)
       setMessages(data)
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      console.error('InboxPage: Error fetching messages:', error)
+      setMessages([])
     }
   }
 
   const sendMessage = async (message: string) => {
-    if (!selectedConversation) return
+    if (!selectedConversation || !selectedPage) {
+      console.log('InboxPage: Cannot send message - missing conversation or page')
+      return
+    }
 
     try {
-      await fetch('/api/messages', {
+      console.log('InboxPage: Sending message to conversation:', selectedConversation.id, 'page:', selectedPage.id)
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId: selectedConversation.id,
+          pageId: selectedPage.id,
           message
         })
       })
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('InboxPage: Send message API error:', errorData)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`)
+      }
+
+      console.log('InboxPage: Message sent successfully')
       // Refresh messages
       fetchMessages(selectedConversation.id)
       
@@ -91,8 +141,17 @@ export default function InboxPage() {
         )
       )
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('InboxPage: Error sending message:', error)
     }
+  }
+
+  const handlePageSelect = (page: any) => {
+    console.log('InboxPage: Page selected:', page)
+    setSelectedPage(page)
+    setSelectedConversation(null) // Reset conversation when page changes
+    setConversations([])
+    setMessages([])
+    setError(null)
   }
 
   return (
@@ -105,21 +164,42 @@ export default function InboxPage() {
             <p className="text-sm text-gray-600">Manage your conversations</p>
           </div>
           <PageSelector
-            onPageSelect={setSelectedPage}
+            onPageSelect={handlePageSelect}
             selectedPage={selectedPage || undefined}
           />
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md mx-4 mt-4">
+          <p className="text-red-800 text-sm">{error}</p>
+          <button
+            onClick={fetchConversations}
+            className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Conversation List */}
         <div className="w-1/3 border-r border-gray-200 bg-white">
-          <ConversationList
-            conversations={conversations}
-            selectedId={selectedConversation?.id}
-            onSelect={setSelectedConversation}
-          />
+          {loading ? (
+            <div className="p-4 text-center text-gray-500">Loading conversations...</div>
+          ) : conversations.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              {selectedPage ? 'No conversations found for this page' : 'Please select a page first'}
+            </div>
+          ) : (
+            <ConversationList
+              conversations={conversations}
+              selectedId={selectedConversation?.id}
+              onSelect={setSelectedConversation}
+            />
+          )}
         </div>
         
         {/* Message Thread */}

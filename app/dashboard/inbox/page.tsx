@@ -30,7 +30,9 @@ export default function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<any>(null)
 
   useEffect(() => {
@@ -112,6 +114,10 @@ export default function InboxPage() {
 
     try {
       console.log('InboxPage: Sending message to conversation:', selectedConversation.id, 'page:', selectedPage.id)
+      setSending(true)
+      setError(null)
+      setSuccess(null)
+      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,9 +134,13 @@ export default function InboxPage() {
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`)
       }
 
-      console.log('InboxPage: Message sent successfully')
-      // Refresh messages
-      fetchMessages(selectedConversation.id)
+      const result = await response.json()
+      console.log('InboxPage: Message sent successfully:', result)
+      
+      setSuccess('Message sent successfully!')
+      
+      // Refresh messages to show the new message
+      await fetchMessages(selectedConversation.id)
       
       // Update conversation in list
       setConversations(prev => 
@@ -140,8 +150,18 @@ export default function InboxPage() {
             : conv
         )
       )
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000)
+      
     } catch (error) {
       console.error('InboxPage: Error sending message:', error)
+      setError(error instanceof Error ? error.message : 'Failed to send message')
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -152,6 +172,7 @@ export default function InboxPage() {
     setConversations([])
     setMessages([])
     setError(null)
+    setSuccess(null)
   }
 
   // Safe function to get initials from participant ID
@@ -176,7 +197,13 @@ export default function InboxPage() {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Success/Error Display */}
+      {success && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-md mx-4 mt-4">
+          <p className="text-green-800 text-sm">{success}</p>
+        </div>
+      )}
+      
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-md mx-4 mt-4">
           <p className="text-red-800 text-sm">{error}</p>
@@ -235,7 +262,7 @@ export default function InboxPage() {
                 messages={messages} 
                 currentPageId={selectedPage?.id}
               />
-              <MessageInput onSend={sendMessage} />
+              <MessageInput onSend={sendMessage} disabled={sending} />
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-500">

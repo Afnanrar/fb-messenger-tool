@@ -89,6 +89,7 @@ export class FacebookClient {
   async sendMessage(pageId: string, conversationId: string, message: string) {
     try {
       console.log('Sending message to conversation:', conversationId, 'page:', pageId)
+      
       // First get the page access token
       const pages = await this.getPages()
       const page = pages.find((p: any) => p.id === pageId)
@@ -99,16 +100,35 @@ export class FacebookClient {
       
       const pageAccessToken = page.access_token
       
+      // Get the conversation to find the participant ID
+      const conversations = await this.getConversations(pageId)
+      const conversation = conversations.find((conv: any) => conv.id === conversationId)
+      
+      if (!conversation) {
+        throw new Error('Conversation not found')
+      }
+      
+      // Extract the participant ID (the user who messaged the page)
+      const participant = conversation.participants?.data?.[0] || conversation.participants?.[0]
+      if (!participant || !participant.id) {
+        throw new Error('No participant found in conversation')
+      }
+      
+      const recipientId = participant.id
+      console.log('Sending message to recipient:', recipientId)
+      
+      // Send message using the correct endpoint and recipient
       const response = await axios.post(
-        `${GRAPH_API_URL}/me/messages`,
+        `${GRAPH_API_URL}/${pageId}/messages`,
         {
-          recipient: { id: conversationId },
+          recipient: { id: recipientId },
           message: { text: message }
         },
         {
           params: { access_token: pageAccessToken }
         }
       )
+      
       console.log('Send message response:', response.data)
       return response.data
     } catch (error) {

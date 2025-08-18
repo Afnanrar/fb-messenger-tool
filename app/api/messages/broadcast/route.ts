@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
           results.push({ subscriberId, success: true, messageId: result.message_id })
         } catch (error) {
           console.error('Failed to send to subscriber:', subscriberId, error)
-          results.push({ subscriberId, success: false, error: error.message })
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          results.push({ subscriberId, success: false, error: errorMessage })
         }
       }
     } else {
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
           results.push({ subscriberId: subscriber.id, success: true, messageId: result.message_id })
         } catch (error) {
           console.error('Failed to send to subscriber:', subscriber.id, error)
-          results.push({ subscriberId: subscriber.id, success: false, error: error.message })
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          results.push({ subscriberId: subscriber.id, success: false, error: errorMessage })
         }
       }
     }
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error sending broadcast:', error)
-    return NextResponse.json({ error: 'Failed to send broadcast' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: `Failed to send broadcast: ${errorMessage}` }, { status: 500 })
   }
 }

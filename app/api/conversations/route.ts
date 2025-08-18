@@ -9,11 +9,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const pageId = searchParams.get('pageId')
     
+    console.log('Conversations API called with:')
+    console.log('- Access token exists:', !!accessToken)
+    console.log('- Page ID:', pageId)
+    console.log('- All cookies:', Array.from(cookies.entries()).map(([name, value]) => ({ name, value: value.value })))
+    
     if (!accessToken) {
-      return NextResponse.json({ error: 'No access token found' }, { status: 401 })
+      console.error('No access token found in cookies')
+      return NextResponse.json({ 
+        error: 'No access token found',
+        cookies: Array.from(cookies.entries()).map(([name, value]) => ({ name, value: value.value }))
+      }, { status: 401 })
     }
     
     if (!pageId) {
+      console.error('No page ID provided')
       return NextResponse.json({ error: 'No page ID provided' }, { status: 400 })
     }
     

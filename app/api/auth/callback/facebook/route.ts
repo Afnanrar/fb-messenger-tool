@@ -49,45 +49,28 @@ export async function GET(request: NextRequest) {
     const userData = userResponse.data
     console.log('User data received:', userData)
     
-    // Check if we're in development mode
-    if (process.env.NEXT_PUBLIC_DEV_MODE === 'true') {
-      console.log('Development mode: Setting mock cookies and redirecting to dashboard')
-      
-      // Set cookies for development mode
-      const response = NextResponse.redirect(`${baseUrl}/dashboard`)
-      response.cookies.set('fb_user_id', userData.id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
-      })
-      response.cookies.set('fb_access_token', access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
-      })
-      
-      console.log('Cookies set, redirecting to:', `${baseUrl}/dashboard`)
-      return response
-    }
-    
-    // Production mode
-    console.log('Production mode: Setting cookies and redirecting to dashboard')
-    
     // Set cookies and redirect to dashboard
+    console.log('Setting cookies and redirecting to dashboard')
+    
     const response = NextResponse.redirect(`${baseUrl}/dashboard`)
+    
+    // Set cookies with proper settings for Vercel
     response.cookies.set('fb_user_id', userData.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always secure for HTTPS
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/', // Ensure cookies are available across the app
+      domain: '.vercel.app' // Allow cookies across Vercel subdomains
     })
+    
     response.cookies.set('fb_access_token', access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always secure for HTTPS
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/', // Ensure cookies are available across the app
+      domain: '.vercel.app' // Allow cookies across Vercel subdomains
     })
     
     console.log('Cookies set, redirecting to:', `${baseUrl}/dashboard`)

@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   
   if (!code) {
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
+    console.log('No code received, redirecting to login with no_code error')
     return NextResponse.redirect(`${baseUrl}/login?error=no_code`)
   }
   
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
     const redirectUri = `${baseUrl}/api/auth/callback/facebook`
     
+    console.log('Exchanging code for access token...')
     const tokenResponse = await axios.get(
       'https://graph.facebook.com/v18.0/oauth/access_token',
       {
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
     const { access_token } = tokenResponse.data
     
     // Get user info
+    console.log('Fetching user info...')
     const userResponse = await axios.get(
       'https://graph.facebook.com/v18.0/me',
       {
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest) {
     
     // Check if we're in development mode
     if (process.env.NEXT_PUBLIC_DEV_MODE === 'true') {
-      console.log('Development mode: Setting mock cookies')
+      console.log('Development mode: Setting mock cookies and redirecting to dashboard')
       
       // Set cookies for development mode
       const response = NextResponse.redirect(`${baseUrl}/dashboard`)
@@ -65,13 +68,14 @@ export async function GET(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       })
       
+      console.log('Cookies set, redirecting to:', `${baseUrl}/dashboard`)
       return response
     }
     
-    // TODO: In production, save user to Supabase and set proper session
-    console.log('Production mode: Would save user to Supabase')
+    // Production mode
+    console.log('Production mode: Setting cookies and redirecting to dashboard')
     
-    // For now, redirect to dashboard with cookies
+    // Set cookies and redirect to dashboard
     const response = NextResponse.redirect(`${baseUrl}/dashboard`)
     response.cookies.set('fb_user_id', userData.id, {
       httpOnly: true,
@@ -86,6 +90,7 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7 // 7 days
     })
     
+    console.log('Cookies set, redirecting to:', `${baseUrl}/dashboard`)
     return response
     
   } catch (error) {
@@ -99,6 +104,7 @@ export async function GET(request: NextRequest) {
     }
     
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app').replace(/\/$/, '')
+    console.log('Redirecting to login with auth_failed error')
     return NextResponse.redirect(`${baseUrl}/login?error=auth_failed`)
   }
 }

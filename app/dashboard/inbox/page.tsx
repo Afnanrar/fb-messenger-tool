@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ConversationList } from '@/components/dashboard/ConversationList'
 import { MessageThread } from '@/components/dashboard/MessageThread'
 import { MessageInput } from '@/components/dashboard/MessageInput'
@@ -31,25 +31,13 @@ export default function InboxPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<any>(null)
 
-  useEffect(() => {
-    console.log('InboxPage: selectedPage changed:', selectedPage)
-    if (selectedPage) {
-      fetchConversations()
-    }
-  }, [selectedPage])
-
-  useEffect(() => {
-    console.log('InboxPage: selectedConversation changed:', selectedConversation)
-    if (selectedConversation && selectedPage) {
-      fetchMessages(selectedConversation.id)
-    }
-  }, [selectedConversation, selectedPage])
-
-  const fetchConversations = async () => {
+  // Wrap functions in useCallback to prevent infinite re-renders
+  const fetchConversations = useCallback(async () => {
     if (!selectedPage) {
       console.log('InboxPage: No page selected, skipping conversation fetch')
       return
@@ -79,9 +67,9 @@ export default function InboxPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPage])
 
-  const fetchMessages = async (conversationId: string) => {
+  const fetchMessages = useCallback(async (conversationId: string) => {
     if (!selectedPage) {
       console.log('InboxPage: No page selected, skipping message fetch')
       return
@@ -89,6 +77,8 @@ export default function InboxPage() {
     
     try {
       console.log('InboxPage: Fetching messages for conversation:', conversationId, 'page:', selectedPage.id)
+      setRefreshing(true)
+      
       const response = await fetch(`/api/messages?conversationId=${conversationId}&pageId=${selectedPage.id}`)
       
       if (!response.ok) {
@@ -103,8 +93,30 @@ export default function InboxPage() {
     } catch (error) {
       console.error('InboxPage: Error fetching messages:', error)
       setMessages([])
+    } finally {
+      setRefreshing(false)
     }
-  }
+  }, [selectedPage])
+
+  const refreshMessages = useCallback(async () => {
+    if (selectedConversation) {
+      await fetchMessages(selectedConversation.id)
+    }
+  }, [selectedConversation, fetchMessages])
+
+  useEffect(() => {
+    console.log('InboxPage: selectedPage changed:', selectedPage)
+    if (selectedPage) {
+      fetchConversations()
+    }
+  }, [selectedPage, fetchConversations])
+
+  useEffect(() => {
+    console.log('InboxPage: selectedConversation changed:', selectedConversation)
+    if (selectedConversation && selectedPage) {
+      fetchMessages(selectedConversation.id)
+    }
+  }, [selectedConversation, selectedPage, fetchMessages])
 
   const sendMessage = async (message: string) => {
     if (!selectedConversation || !selectedPage) {
@@ -139,10 +151,19 @@ export default function InboxPage() {
       
       setSuccess('Message sent successfully!')
       
-      // Refresh messages to show the new message
-      await fetchMessages(selectedConversation.id)
+      // Create a temporary message to show immediately
+      const tempMessage: Message = {
+        id: `temp_${Date.now()}`,
+        message: message,
+        sender_id: selectedPage.name || 'You',
+        is_from_page: true,
+        created_at: new Date().toISOString()
+      }
       
-      // Update conversation in list
+      // Add the new message to the messages list immediately
+      setMessages(prev => [...prev, tempMessage])
+      
+      // Update conversation in list with new message
       setConversations(prev => 
         prev.map(conv => 
           conv.id === selectedConversation.id 
@@ -150,6 +171,12 @@ export default function InboxPage() {
             : conv
         )
       )
+      
+      // Wait a moment then refresh messages to get the real message from Facebook
+      setTimeout(async () => {
+        console.log('InboxPage: Refreshing messages after send')
+        await fetchMessages(selectedConversation.id)
+      }, 1000)
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000)
@@ -261,6 +288,8 @@ export default function InboxPage() {
               <MessageThread 
                 messages={messages} 
                 currentPageId={selectedPage?.id}
+                onRefresh={refreshMessages}
+                loading={refreshing}
               />
               <MessageInput onSend={sendMessage} disabled={sending} />
             </>
@@ -268,7 +297,7 @@ export default function InboxPage() {
             <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">💬</span>
+                  <span className="text-2xl">��</span>
                 </div>
                 <p className="text-lg font-medium">Select a conversation</p>
                 <p className="text-sm">Choose a conversation from the list to start messaging</p>

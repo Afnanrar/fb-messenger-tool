@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { User, MessageSquare } from 'lucide-react'
+import { User, MessageSquare, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface Message {
   id: string
@@ -14,9 +15,11 @@ interface Message {
 interface MessageThreadProps {
   messages: Message[]
   currentPageId?: string
+  onRefresh?: () => void
+  loading?: boolean
 }
 
-export function MessageThread({ messages, currentPageId }: MessageThreadProps) {
+export function MessageThread({ messages, currentPageId, onRefresh, loading = false }: MessageThreadProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -28,8 +31,17 @@ export function MessageThread({ messages, currentPageId }: MessageThreadProps) {
   }, [messages])
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    if (!dateString) return 'Unknown'
+    
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Invalid date'
+      
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch (error) {
+      console.error('Error formatting time:', dateString, error)
+      return 'Invalid time'
+    }
   }
 
   if (messages.length === 0) {
@@ -39,6 +51,18 @@ export function MessageThread({ messages, currentPageId }: MessageThreadProps) {
           <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p>No messages yet</p>
           <p className="text-sm">Start a conversation!</p>
+          {onRefresh && (
+            <Button
+              onClick={onRefresh}
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh Messages
+            </Button>
+          )}
         </div>
       </div>
     )
@@ -46,6 +70,24 @@ export function MessageThread({ messages, currentPageId }: MessageThreadProps) {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-700">Messages ({messages.length})</h3>
+        {onRefresh && (
+          <Button
+            onClick={onRefresh}
+            variant="ghost"
+            size="sm"
+            disabled={loading}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
+      </div>
+
+      {/* Messages */}
       {messages.map((message) => {
         const isFromPage = message.is_from_page
         

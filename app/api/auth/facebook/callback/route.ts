@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   
   if (!code) {
-    return NextResponse.redirect('/login?error=no_code')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
+    return NextResponse.redirect(`${baseUrl}/login?error=no_code`)
   }
   
   try {
@@ -52,7 +53,8 @@ export async function GET(request: NextRequest) {
       .single()
     
     // Store access token in session
-    const response = NextResponse.redirect('/dashboard')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
+    const response = NextResponse.redirect(`${baseUrl}/dashboard`)
     response.cookies.set('fb_access_token', access_token, {
       httpOnly: true,
       secure: true,
@@ -69,6 +71,7 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Facebook auth error:', error)
-    return NextResponse.redirect('/login?error=auth_failed')
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed`)
   }
 }

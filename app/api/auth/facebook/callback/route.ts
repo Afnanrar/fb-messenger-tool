@@ -73,12 +73,14 @@ export async function GET(request: NextRequest) {
     console.error('Facebook auth error:', error)
     
     // Log detailed error for debugging
-    if (error.response) {
-      console.error('Error response:', error.response.data)
-      console.error('Error status:', error.response.status)
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any
+      console.error('Error response:', axiosError.response?.data)
+      console.error('Error status:', axiosError.response?.status)
     }
     
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
-    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed&details=${encodeURIComponent(error.message || 'Unknown error')}`)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed&details=${encodeURIComponent(errorMessage)}`)
   }
 }

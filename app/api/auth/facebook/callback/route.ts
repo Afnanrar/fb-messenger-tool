@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
-import { createServerClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -39,29 +38,30 @@ export async function GET(request: NextRequest) {
     )
     
     const userData = userResponse.data
-    const supabase = createServerClient()
     
-    // Upsert user
-    const { data: user } = await supabase
-      .from('users')
-      .upsert({
-        facebook_id: userData.id,
-        name: userData.name,
-        email: userData.email
-      })
-      .select()
-      .single()
+    // For development: Skip Supabase and use mock user ID
+    const mockUserId = 'dev-user-' + userData.id
     
     // Store access token in session
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
     const response = NextResponse.redirect(`${baseUrl}/dashboard`)
+    
+    // Set cookies for development
     response.cookies.set('fb_access_token', access_token, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7 // 7 days
     })
-    response.cookies.set('user_id', user.id, {
+    response.cookies.set('user_id', mockUserId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7
+    })
+    
+    // Also store user data in cookies for development
+    response.cookies.set('user_name', userData.name || 'Unknown User', {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
@@ -71,7 +71,14 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Facebook auth error:', error)
+    
+    // Log detailed error for debugging
+    if (error.response) {
+      console.error('Error response:', error.response.data)
+      console.error('Error status:', error.response.status)
+    }
+    
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://myaimmydream.vercel.app'
-    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed`)
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed&details=${encodeURIComponent(error.message || 'Unknown error')}`)
   }
 }

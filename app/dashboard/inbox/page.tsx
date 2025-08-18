@@ -36,6 +36,15 @@ export default function InboxPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<any>(null)
 
+  // Helper function to sort messages chronologically
+  const sortMessages = useCallback((messageList: Message[]) => {
+    return messageList.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime()
+      const timeB = new Date(b.created_at).getTime()
+      return timeA - timeB // Ascending order (oldest first, newest last)
+    })
+  }, [])
+
   // Wrap functions in useCallback to prevent infinite re-renders
   const fetchConversations = useCallback(async () => {
     if (!selectedPage) {
@@ -89,14 +98,17 @@ export default function InboxPage() {
       
       const data = await response.json()
       console.log('InboxPage: Messages data received:', data)
-      setMessages(data)
+      
+      // Sort messages chronologically before setting state
+      const sortedMessages = sortMessages(data)
+      setMessages(sortedMessages)
     } catch (error) {
       console.error('InboxPage: Error fetching messages:', error)
       setMessages([])
     } finally {
       setRefreshing(false)
     }
-  }, [selectedPage])
+  }, [selectedPage, sortMessages])
 
   const refreshMessages = useCallback(async () => {
     if (selectedConversation) {
@@ -160,8 +172,9 @@ export default function InboxPage() {
         created_at: new Date().toISOString()
       }
       
-      // Add the new message to the messages list immediately
-      setMessages(prev => [...prev, tempMessage])
+      // Add the new message to the messages list and sort chronologically
+      const updatedMessages = sortMessages([...messages, tempMessage])
+      setMessages(updatedMessages)
       
       // Update conversation in list with new message
       setConversations(prev => 
@@ -297,7 +310,7 @@ export default function InboxPage() {
             <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">��</span>
+                  <span className="text-2xl">💬</span>
                 </div>
                 <p className="text-lg font-medium">Select a conversation</p>
                 <p className="text-sm">Choose a conversation from the list to start messaging</p>

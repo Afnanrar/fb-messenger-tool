@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FacebookClient } from '@/lib/facebook/client'
 
+interface TransformedMessage {
+  id: string
+  message: string
+  sender_id: string
+  is_from_page: boolean
+  created_at: string
+  _raw: any
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get access token and conversation ID from cookies/query params
@@ -27,7 +36,7 @@ export async function GET(request: NextRequest) {
     console.log('Raw Facebook messages response:', JSON.stringify(messages, null, 2))
     
     // Transform the data to match our expected format
-    const transformedMessages = messages.map((msg: any) => {
+    const transformedMessages: TransformedMessage[] = messages.map((msg: any) => {
       console.log('Processing message:', msg)
       
       // Extract sender info
@@ -49,9 +58,16 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    console.log('Transformed messages:', JSON.stringify(transformedMessages, null, 2))
+    // Sort messages by creation time (oldest first, newest last)
+    const sortedMessages = transformedMessages.sort((a: TransformedMessage, b: TransformedMessage) => {
+      const timeA = new Date(a.created_at).getTime()
+      const timeB = new Date(b.created_at).getTime()
+      return timeA - timeB // Ascending order (oldest first)
+    })
     
-    return NextResponse.json(transformedMessages)
+    console.log('Transformed and sorted messages:', JSON.stringify(sortedMessages, null, 2))
+    
+    return NextResponse.json(sortedMessages)
   } catch (error) {
     console.error('Error fetching messages:', error)
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })

@@ -1,39 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { FacebookClient } from '@/lib/facebook/client'
 import { processSpintax } from '@/lib/utils/spintax'
 
 export async function POST(request: NextRequest) {
   try {
-    const { pageId, message } = await request.json()
+    const { message, pageId, selectedSubscribers } = await request.json()
+    const cookies = request.cookies
+    const accessToken = cookies.get('fb_access_token')?.value
     
-    if (!pageId || !message) {
-      return NextResponse.json({ error: 'Page ID and message required' }, { status: 400 })
+    if (!accessToken) {
+      return NextResponse.json({ error: 'No access token found' }, { status: 401 })
     }
     
-    // For development: Simulate broadcast
-    const mockRecipients = 25
-    const mockSent = 23
-    const mockFailed = 2
+    if (!message || !pageId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
     
-    // Process spintax for demonstration
-    const sampleVariations = [
-      processSpintax(message),
-      processSpintax(message),
-      processSpintax(message)
-    ]
+    console.log('Sending broadcast message to page:', pageId)
+    
+    // Create Facebook client
+    const facebookClient = new FacebookClient(accessToken)
+    
+    // Process spintax if present
+    const processedMessage = processSpintax(message)
+    
+    let results = []
+    
+    if (selectedSubscribers && selectedSubscribers.length > 0) {
+      // Send to specific subscribers
+      console.log('Sending to selected subscribers:', selectedSubscribers.length)
+      for (const subscriberId of selectedSubscribers) {
+        try {
+          const result = await facebookClient.sendMessage(pageId, subscriberId, processedMessage)
+          results.push({ subscriberId, success: true, messageId: result.message_id })
+        } catch (error) {
+          console.error('Failed to send to subscriber:', subscriberId, error)
+          results.push({ subscriberId, success: false, error: error.message })
+        }
+      }
+    } else {
+      // Get all subscribers and send broadcast
+      console.log('Getting all subscribers for broadcast')
+      const subscribers = await facebookClient.getPageSubscribers(pageId)
+      
+      console.log('Sending broadcast to subscribers:', subscribers.length)
+      for (const subscriber of subscribers) {
+        try {
+          const result = await facebookClient.sendMessage(pageId, subscriber.id, processedMessage)
+          results.push({ subscriberId: subscriber.id, success: true, messageId: result.message_id })
+        } catch (error) {
+          console.error('Failed to send to subscriber:', subscriber.id, error)
+          results.push({ subscriberId: subscriber.id, success: false, error: error.message })
+        }
+      }
+    }
+    
+    const successCount = results.filter(r => r.success).length
+    const failureCount = results.filter(r => !r.success).length
+    
+    console.log('Broadcast completed. Success:', successCount, 'Failures:', failureCount)
     
     return NextResponse.json({
       success: true,
-      broadcast_id: 'broadcast-dev-1',
-      sent: mockSent,
-      failed: mockFailed,
-      message: `Development mode: Would send to ${mockRecipients} recipients`,
-      variations: sampleVariations
+      results,
+      summary: {
+        total: results.length,
+        success: successCount,
+        failures: failureCount
+      }
     })
   } catch (error) {
-    console.error('Broadcast error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to send broadcast',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    console.error('Error sending broadcast:', error)
+    return NextResponse.json({ error: 'Failed to send broadcast' }, { status: 500 })
   }
 }

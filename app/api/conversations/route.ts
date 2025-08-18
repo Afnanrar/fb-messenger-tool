@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { FacebookClient } from '@/lib/facebook/client'
 
 export async function GET(request: NextRequest) {
   try {
-    // For development: Return mock conversations
-    const mockConversations = [
-      {
-        id: 'conv-1',
-        participant_id: 'user_123',
-        last_message: 'Hello! How can I help you today?',
-        last_message_time: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        unread_count: 1,
-        pages: {
-          name: 'Test Facebook Page'
-        }
-      },
-      {
-        id: 'conv-2',
-        participant_id: 'user_456',
-        last_message: 'I have a question about pricing.',
-        last_message_time: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        unread_count: 0,
-        pages: {
-          name: 'Test Facebook Page'
-        }
-      }
-    ]
+    // Get access token and page ID from cookies/query params
+    const cookies = request.cookies
+    const accessToken = cookies.get('fb_access_token')?.value
+    const { searchParams } = new URL(request.url)
+    const pageId = searchParams.get('pageId')
     
-    return NextResponse.json(mockConversations)
+    if (!accessToken) {
+      return NextResponse.json({ error: 'No access token found' }, { status: 401 })
+    }
+    
+    if (!pageId) {
+      return NextResponse.json({ error: 'No page ID provided' }, { status: 400 })
+    }
+    
+    console.log('Fetching conversations for page:', pageId)
+    
+    // Create Facebook client and fetch conversations
+    const facebookClient = new FacebookClient(accessToken)
+    const conversations = await facebookClient.getConversations(pageId)
+    
+    console.log('Facebook conversations fetched:', conversations)
+    
+    return NextResponse.json(conversations)
   } catch (error) {
     console.error('Error fetching conversations:', error)
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 })

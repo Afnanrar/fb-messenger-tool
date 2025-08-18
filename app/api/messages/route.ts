@@ -1,57 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { FacebookClient } from '@/lib/facebook/client'
 
 export async function GET(request: NextRequest) {
   try {
+    // Get access token and conversation ID from cookies/query params
+    const cookies = request.cookies
+    const accessToken = cookies.get('fb_access_token')?.value
     const { searchParams } = new URL(request.url)
     const conversationId = searchParams.get('conversationId')
+    const pageId = searchParams.get('pageId')
     
-    if (!conversationId) {
-      return NextResponse.json({ error: 'Conversation ID required' }, { status: 400 })
+    if (!accessToken) {
+      return NextResponse.json({ error: 'No access token found' }, { status: 401 })
     }
     
-    // For development: Return mock messages
-    const mockMessages = [
-      {
-        id: 'msg-1',
-        message: 'Hello! How can I help you today?',
-        sender_id: 'test_user_123',
-        is_from_page: false,
-        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString()
-      },
-      {
-        id: 'msg-2',
-        message: 'Hi! I have a question about your services.',
-        sender_id: 'page_123',
-        is_from_page: true,
-        created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString()
-      }
-    ]
+    if (!conversationId || !pageId) {
+      return NextResponse.json({ error: 'Missing conversationId or pageId' }, { status: 400 })
+    }
     
-    return NextResponse.json(mockMessages)
+    console.log('Fetching messages for conversation:', conversationId, 'page:', pageId)
+    
+    // Create Facebook client and fetch messages
+    const facebookClient = new FacebookClient(accessToken)
+    const messages = await facebookClient.getMessages(pageId, conversationId)
+    
+    console.log('Facebook messages fetched:', messages)
+    
+    return NextResponse.json(messages)
   } catch (error) {
     console.error('Error fetching messages:', error)
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })
-  }
+    }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { conversationId, message } = await request.json()
+    const { message, conversationId, pageId } = await request.json()
+    const cookies = request.cookies
+    const accessToken = cookies.get('fb_access_token')?.value
     
-    if (!conversationId || !message) {
-      return NextResponse.json({ error: 'Conversation ID and message required' }, { status: 400 })
+    if (!accessToken) {
+      return NextResponse.json({ error: 'No access token found' }, { status: 401 })
     }
     
-    // For development: Return mock message
-    const mockMessage = {
-      id: 'msg-new',
-      message,
-      sender_id: 'page_123',
-      is_from_page: true,
-      created_at: new Date().toISOString()
+    if (!message || !conversationId || !pageId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
     
-    return NextResponse.json(mockMessage)
+    console.log('Sending message to conversation:', conversationId, 'page:', pageId)
+    
+    // Create Facebook client and send message
+    const facebookClient = new FacebookClient(accessToken)
+    const result = await facebookClient.sendMessage(pageId, conversationId, message)
+    
+    console.log('Message sent successfully:', result)
+    
+    return NextResponse.json({ success: true, messageId: result.message_id })
   } catch (error) {
     console.error('Error sending message:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })

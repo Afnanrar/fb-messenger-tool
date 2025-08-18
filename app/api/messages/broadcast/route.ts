@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           recipient_id: recipientId,
           message_sent: personalizedMessage,
           status: 'failed',
-          error_message: error.message
+          error_message: error instanceof Error ? error.message : 'Unknown error'
         })
       
       failedCount++

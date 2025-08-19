@@ -60,16 +60,12 @@ export async function GET(request: NextRequest) {
     
     // Facebook returns messages in reverse chronological order (newest first)
     // We need chronological order (oldest first, newest last)
-    // So we sort by time and then reverse the array
-    const sortedMessages = transformedMessages.sort((a: TransformedMessage, b: TransformedMessage) => {
-      const timeA = new Date(a.created_at).getTime()
-      const timeB = new Date(b.created_at).getTime()
-      return timeA - timeB // Ascending order (oldest first)
-    }).reverse() // Reverse to get oldest first, newest last
+    // Simply reverse the array to get the correct order
+    const chronologicalMessages = transformedMessages.reverse()
     
-    console.log('Transformed and sorted messages (oldest first, newest last):', JSON.stringify(sortedMessages, null, 2))
+    console.log('Messages in chronological order (oldest first, newest last):', JSON.stringify(chronologicalMessages, null, 2))
     
-    return NextResponse.json(sortedMessages)
+    return NextResponse.json(chronologicalMessages)
   } catch (error) {
     console.error('Error fetching messages:', error)
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })

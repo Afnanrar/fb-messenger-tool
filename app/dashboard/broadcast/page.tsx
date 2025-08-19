@@ -4,386 +4,457 @@ import { useState, useEffect } from 'react'
 import { 
   Send, 
   Clock, 
-  CheckCircle, 
+  Users,
+  AlertTriangle,
+  Calendar,
+  Hash,
+  Sparkles,
+  Zap,
+  Target,
+  TrendingUp,
+  CheckCircle,
   XCircle,
-  AlertCircle,
-  Eye,
-  Plus,
-  ArrowLeft,
-  Upload,
-  Image as ImageIcon,
-  FileText
+  RefreshCw
 } from 'lucide-react'
-import Layout from '@/components/Layout'
-import { useRouter } from 'next/navigation'
 
 interface Campaign {
   id: string
-  status: 'completed' | 'in_progress' | 'failed'
+  status: string
   progress: number
-  content: string
-  total: number
-  sent: number
-  failed: number
-  createdAt: string
-  completedAt?: string
-  timeSpent?: string
+  message_template: string
+  recipient_count: number
+  sent_count: number
+  failed_count: number
+  created_at: string
 }
 
 export default function BroadcastPage() {
-  const router = useRouter()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [showNewMessage, setShowNewMessage] = useState(false)
   const [message, setMessage] = useState('')
-  const [contentType, setContentType] = useState<'text' | 'image'>('text')
-  const [selectedAudience, setSelectedAudience] = useState('all')
+  const [messageTag, setMessageTag] = useState('CONFIRMED_EVENT_UPDATE')
   const [scheduling, setScheduling] = useState(false)
+  const [scheduledTime, setScheduledTime] = useState('')
+  const [audienceType, setAudienceType] = useState('all')
+  const [sending, setSending] = useState(false)
+  const [stats, setStats] = useState({
+    totalSent: 0,
+    totalRecipients: 0,
+    successRate: 0
+  })
+
+  // Facebook Message Tags (as per Graph API docs)
+  const messageTags = [
+    { value: 'CONFIRMED_EVENT_UPDATE', label: 'Confirmed Event Update', desc: 'Send notifications about confirmed events' },
+    { value: 'POST_PURCHASE_UPDATE', label: 'Post-Purchase Update', desc: 'Updates about recent purchases' },
+    { value: 'ACCOUNT_UPDATE', label: 'Account Update', desc: 'Non-promotional account updates' },
+    { value: 'HUMAN_AGENT', label: 'Human Agent', desc: 'Message from human agent' },
+  ]
 
   useEffect(() => {
     fetchCampaigns()
+    const interval = setInterval(fetchCampaigns, 5000) // Refresh every 5 seconds
+    return () => clearInterval(interval)
   }, [])
 
   const fetchCampaigns = async () => {
-    // Simulated data
-    setCampaigns([
-      {
-        id: '495457',
-        status: 'completed',
-        progress: 100,
-        content: '%(name)s! Wanna Tripple Cashout???',
-        total: 1523,
-        sent: 1523,
-        failed: 0,
-        createdAt: 'August 01, 2025 08:57 AM',
-        completedAt: 'August 01, 2025 09:15 AM',
-        timeSpent: 'less than a minute'
-      },
-      {
-        id: '479126',
-        status: 'completed',
-        progress: 100,
-        content: 'Last Call...........',
-        total: 892,
-        sent: 892,
-        failed: 0,
-        createdAt: 'July 28, 2025 09:04 AM',
-        timeSpent: 'less than a minute'
-      },
-      {
-        id: '477059',
-        status: 'completed',
-        progress: 100,
-        content: '%(name)s! Are You...',
-        total: 2341,
-        sent: 2341,
-        failed: 0,
-        createdAt: 'July 27, 2025 11:58 PM',
-        timeSpent: 'less than a minute'
+    try {
+      const response = await fetch('/api/messages/broadcast')
+      const data = await response.json()
+      
+      if (data.success && data.broadcasts) {
+        setCampaigns(data.broadcasts)
+        
+        // Calculate stats
+        const total = data.broadcasts.reduce((acc: number, b: Campaign) => acc + b.sent_count, 0)
+        const recipients = data.broadcasts.reduce((acc: number, b: Campaign) => acc + b.recipient_count, 0)
+        const successRate = recipients > 0 ? (total / recipients * 100) : 0
+        
+        setStats({
+          totalSent: total,
+          totalRecipients: recipients,
+          successRate: Math.round(successRate * 10) / 10
+        })
       }
-    ])
+    } catch (error) {
+      console.error('Error fetching campaigns:', error)
+    }
   }
 
   const handleSendBroadcast = async () => {
     if (!message.trim()) return
-
-    const newCampaign: Campaign = {
-      id: Date.now().toString(),
-      status: 'in_progress',
-      progress: 0,
-      content: message,
-      total: 0,
-      sent: 0,
-      failed: 0,
-      createdAt: new Date().toLocaleString()
+    
+    setSending(true)
+    
+    try {
+      const response = await fetch('/api/messages/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pageId: process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID,
+          message,
+          messageTag,
+          scheduled: scheduling,
+          scheduledTime: scheduling ? scheduledTime : null,
+          audienceType
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setMessage('')
+        setShowNewMessage(false)
+        fetchCampaigns() // Refresh the list
+        
+        // Show success notification
+        alert(`Broadcast sent successfully! Sent: ${data.sent}, Failed: ${data.failed}`)
+      } else {
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error sending broadcast:', error)
+      alert('Failed to send broadcast')
+    } finally {
+      setSending(false)
     }
-
-    setCampaigns([newCampaign, ...campaigns])
-    setMessage('')
-    setShowNewMessage(false)
-
-    // Simulate sending
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += 10
-      setCampaigns(prev => prev.map(c => 
-        c.id === newCampaign.id 
-          ? { ...c, progress, status: progress >= 100 ? 'completed' : 'in_progress' }
-          : c
-      ))
-      if (progress >= 100) clearInterval(interval)
-    }, 200)
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-[#0a0e27] p-6">
+      {/* Floating Gradients */}
+      <div className="floating-gradient gradient-1"></div>
+      <div className="floating-gradient gradient-2"></div>
+      
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => router.push('/dashboard/pages')}
-              className="text-gray-400 hover:text-white"
-            >
-              <ArrowLeft size={24} />
-            </button>
+        <div className="mb-8">
+          <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">Bulk Messages for Spinners Lounge</h1>
-              <p className="text-gray-400 mt-1">Send and manage bulk messages to your page leads</p>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Broadcast Center
+              </h1>
+              <p className="text-gray-400 mt-2">Reach your audience with powerful messaging</p>
             </div>
+            
+            <button
+              onClick={() => setShowNewMessage(true)}
+              className="btn-gradient flex items-center gap-2"
+            >
+              <Sparkles size={20} />
+              Create Campaign
+            </button>
           </div>
           
-          <button 
-            onClick={() => setShowNewMessage(true)}
-            className="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-colors"
-          >
-            <Plus size={20} />
-            <span>New Bulk Message</span>
-          </button>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Total Messages Sent</p>
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {stats.totalSent.toLocaleString()}
+                  </p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                  <Send size={24} className="text-white" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Total Recipients</p>
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {stats.totalRecipients.toLocaleString()}
+                  </p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                  <Users size={24} className="text-white" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Success Rate</p>
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {stats.successRate}%
+                  </p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+                  <TrendingUp size={24} className="text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* New Message Form */}
+        {/* New Message Modal */}
         {showNewMessage && (
-          <div className="bg-[#192734] rounded-lg border border-[#38444d] p-6">
-            <div className="flex justify-between items-start mb-6">
-              <h2 className="text-xl font-bold text-white">New Bulk Message for Spinners Lounge</h2>
-              <button 
-                onClick={() => setShowNewMessage(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Warning Box */}
-            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="text-red-500 mt-1" size={20} />
-                <div className="text-sm">
-                  <p className="text-red-400 font-semibold mb-2">Page Reputation Warning</p>
-                  <p className="text-gray-300">Please note that your page's reputation is in your hands. Misuse of bulk messaging can lead to:</p>
-                  <ul className="list-disc list-inside text-gray-400 mt-2 space-y-1">
-                    <li>Reduced engagement from users</li>
-                    <li>Users marking messages as spam</li>
-                    <li>Facebook imposing restrictions on your page</li>
-                    <li>Permanent page suspension</li>
-                  </ul>
-                  <p className="text-gray-300 mt-2">Always ensure your messages are relevant and valuable to your audience.</p>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-700">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-white">Create New Campaign</h2>
+                  <button
+                    onClick={() => setShowNewMessage(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Select Audience
-                  </label>
-                  <select 
-                    value={selectedAudience}
-                    onChange={(e) => setSelectedAudience(e.target.value)}
-                    className="w-full bg-[#273340] border border-[#38444d] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#1d9bf0]"
-                  >
-                    <option value="all">All Leads</option>
-                    <option value="recent">Recent Activity (24h)</option>
-                    <option value="engaged">Highly Engaged</option>
-                    <option value="group">Specific Group</option>
-                  </select>
-                  <p className="text-xs text-gray-400 mt-1">0 of 0 leads</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Select Content Type
-                  </label>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setContentType('text')}
-                      className={`flex-1 py-2 px-4 rounded-lg border ${
-                        contentType === 'text' 
-                          ? 'bg-[#1d9bf0] border-[#1d9bf0] text-white' 
-                          : 'bg-[#273340] border-[#38444d] text-gray-300'
-                      }`}
-                    >
-                      <FileText size={18} className="inline mr-2" />
-                      Text Message
-                    </button>
-                    <button
-                      onClick={() => setContentType('image')}
-                      className={`flex-1 py-2 px-4 rounded-lg border ${
-                        contentType === 'image' 
-                          ? 'bg-[#1d9bf0] border-[#1d9bf0] text-white' 
-                          : 'bg-[#273340] border-[#38444d] text-gray-300'
-                      }`}
-                    >
-                      <ImageIcon size={18} className="inline mr-2" />
-                      Image/Upload
-                    </button>
+              
+              <div className="p-6">
+                {/* Warning */}
+                <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="text-orange-400 flex-shrink-0" size={20} />
+                    <div className="text-sm">
+                      <p className="text-orange-400 font-semibold mb-1">Important Notice</p>
+                      <p className="text-gray-300">
+                        Messages must comply with Facebook's policies. Use message tags only for their intended purpose.
+                        Misuse may result in page restrictions.
+                      </p>
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scheduling}
-                      onChange={(e) => setScheduling(e.target.checked)}
-                      className="w-4 h-4 bg-[#273340] border-[#38444d] rounded text-[#1d9bf0]"
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Target className="inline mr-1" size={16} />
+                        Target Audience
+                      </label>
+                      <select
+                        value={audienceType}
+                        onChange={(e) => setAudienceType(e.target.value)}
+                        className="w-full bg-[#1e2341] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                      >
+                        <option value="all">All Active Users (24h)</option>
+                        <option value="engaged">Highly Engaged Users</option>
+                        <option value="recent">Recent Conversations</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Hash className="inline mr-1" size={16} />
+                        Message Tag (For 24h+ Messaging)
+                      </label>
+                      <select
+                        value={messageTag}
+                        onChange={(e) => setMessageTag(e.target.value)}
+                        className="w-full bg-[#1e2341] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                      >
+                        {messageTags.map(tag => (
+                          <option key={tag.value} value={tag.value}>
+                            {tag.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {messageTags.find(t => t.value === messageTag)?.desc}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={scheduling}
+                          onChange={(e) => setScheduling(e.target.checked)}
+                          className="w-5 h-5 rounded border-gray-600 bg-[#1e2341] text-purple-500 focus:ring-purple-500"
+                        />
+                        <span className="text-sm text-gray-300 flex items-center gap-2">
+                          <Calendar size={16} />
+                          Schedule for later
+                        </span>
+                      </label>
+                      
+                      {scheduling && (
+                        <input
+                          type="datetime-local"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="mt-3 w-full bg-[#1e2341] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+                          min={new Date().toISOString().slice(0, 16)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Right Column */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <Sparkles className="inline mr-1" size={16} />
+                      Message Content
+                    </label>
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Hi %(name)s! Your message here... Use {option1|option2} for variations."
+                      className="w-full h-48 bg-[#1e2341] border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors resize-none"
                     />
-                    <span className="text-sm text-gray-300">Enable Scheduling</span>
-                  </label>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-gray-400">
+                        Use %(name)s for personalization
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {message.length} characters
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={() => setShowNewMessage(false)}
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendBroadcast}
+                    disabled={sending || !message.trim()}
+                    className="btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sending ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={18} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={18} />
+                        Launch Campaign
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-
-              {/* Right Column */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Message
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Enter your message here. Use %(name)s to include the recipient's name for personalization."
-                  className="w-full h-48 bg-[#273340] border border-[#38444d] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#1d9bf0] resize-none"
-                />
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-xs text-gray-400">
-                    <input type="checkbox" className="mr-1" />
-                    Insert Recipient Name
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {message.length}/1000 characters
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Message Tag
-                  </label>
-                  <select className="w-full bg-[#273340] border border-[#38444d] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#1d9bf0]">
-                    <option>Select a tag</option>
-                    <option>CONFIRMED_EVENT_UPDATE</option>
-                    <option>POST_PURCHASE_UPDATE</option>
-                    <option>ACCOUNT_UPDATE</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowNewMessage(false)}
-                className="px-6 py-2 bg-[#273340] hover:bg-[#38444d] text-white rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendBroadcast}
-                className="px-6 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white rounded-lg transition-colors flex items-center space-x-2"
-              >
-                <Send size={18} />
-                <span>Send Messages</span>
-              </button>
             </div>
           </div>
         )}
-
+        
         {/* Campaigns Table */}
-        <div className="bg-[#192734] rounded-lg border border-[#38444d] overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-[#273340] border-b border-[#38444d]">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Progress
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Content
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Sent
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Created/Scheduled At
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Time Spent
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Details
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#38444d]">
-              {campaigns.map((campaign) => (
-                <tr key={campaign.id} className="hover:bg-[#273340] transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-white">{campaign.id}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {campaign.status === 'completed' && (
-                      <span className="badge-success">Completed</span>
-                    )}
-                    {campaign.status === 'in_progress' && (
-                      <span className="badge-warning">In Progress</span>
-                    )}
-                    {campaign.status === 'failed' && (
-                      <span className="badge-danger">Failed</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="w-32">
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-bar-fill"
-                          style={{ width: `${campaign.progress}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-400 mt-1">{campaign.progress}%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-300 truncate block max-w-xs">
-                      {campaign.content}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm text-white">{campaign.total}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm text-white">{campaign.sent}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-300">{campaign.createdAt}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-300">{campaign.timeSpent || '-'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm text-gray-400">-</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#1d9bf0] hover:text-[#1a8cd8] p-2">
-                      <Eye size={18} />
-                    </button>
-                  </td>
+        <div className="glass-card overflow-hidden">
+          <div className="p-6 border-b border-gray-700">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">Campaign History</h2>
+              <button
+                onClick={fetchCampaigns}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <RefreshCw size={20} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#1e2341] border-b border-gray-700">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">ID</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Progress</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Content</th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase">Total</th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase">Sent</th>
+                  <th className="px-6 py-4 text-center text-gray-400 uppercase">Failed</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {campaigns.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                      No campaigns yet. Create your first campaign to get started!
+                    </td>
+                  </tr>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <tr key={campaign.id} className="hover:bg-[#1e2341] transition-colors">
+                      <td className="px-6 py-4 text-sm text-gray-300">
+                        #{campaign.id.slice(0, 8)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {campaign.status === 'completed' && (
+                          <span className="status-pill status-success">
+                            <CheckCircle size={14} />
+                            Completed
+                          </span>
+                        )}
+                        {campaign.status === 'processing' && (
+                          <span className="status-pill status-warning">
+                            <RefreshCw size={14} className="animate-spin" />
+                            Processing
+                          </span>
+                        )}
+                        {campaign.status === 'scheduled' && (
+                          <span className="status-pill status-warning">
+                            <Clock size={14} />
+                            Scheduled
+                          </span>
+                        )}
+                        {campaign.status === 'failed' && (
+                          <span className="status-pill status-danger">
+                            <XCircle size={14} />
+                            Failed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="w-32">
+                          <div className="progress-container">
+                            <div 
+                              className="progress-fill"
+                              style={{ width: `${campaign.progress || 0}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-400 mt-1">
+                            {campaign.progress || 0}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-300 truncate block max-w-xs">
+                          {campaign.message_template}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-bold text-white">
+                          {campaign.recipient_count}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-bold text-green-400">
+                          {campaign.sent_count}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-bold text-red-400">
+                          {campaign.failed_count}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-400">
+                          {new Date(campaign.created_at).toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </Layout>
+    </div>
   )
 }

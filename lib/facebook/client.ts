@@ -11,48 +11,37 @@ export class FacebookClient {
 
   async getPages() {
     try {
-      console.log('Fetching pages with access token...')
-      const response = await axios.get(`${GRAPH_API_URL}/me/accounts`, {
-        params: {
-          access_token: this.accessToken,
-          fields: 'id,name,category,access_token'
+      const response = await axios.get(
+        `${GRAPH_API_URL}/me/accounts`,
+        {
+          params: {
+            access_token: this.accessToken,
+            fields: 'id,name,category,access_token'
+          }
         }
-      })
-      console.log('Pages response:', response.data)
-      return response.data.data
+      )
+      return response.data.data || []
     } catch (error) {
       console.error('Error fetching pages:', error)
       throw error
     }
   }
 
-  async getConversations(pageId: string) {
+  async getConversations(pageId: string, pageAccessToken: string) {
     try {
-      console.log('Fetching conversations for page:', pageId)
-      // First get the page access token
-      const pages = await this.getPages()
-      const page = pages.find((p: any) => p.id === pageId)
-      
-      if (!page) {
-        throw new Error('Page not found')
-      }
-      
-      const pageAccessToken = page.access_token
-      
       const response = await axios.get(
         `${GRAPH_API_URL}/${pageId}/conversations`,
         {
           params: {
             access_token: pageAccessToken,
-            fields: 'participants,messages{message,from,created_time,attachments},updated_time'
+            fields: 'participants,updated_time,messages{message,from,created_time}'
           }
         }
       )
-      console.log('Conversations response:', response.data)
-      return response.data.data
+      return response.data.data || []
     } catch (error) {
       console.error('Error fetching conversations:', error)
-      throw error
+      return []
     }
   }
 
@@ -86,7 +75,37 @@ export class FacebookClient {
     }
   }
 
-  async sendMessage(pageId: string, conversationId: string, message: string) {
+  async sendMessage(
+    recipientId: string,
+    message: string,
+    pageAccessToken: string,
+    messageTag?: string
+  ) {
+    const payload: any = {
+      recipient: { id: recipientId },
+      message: { text: message }
+    }
+    
+    // Add message tag if provided (for sending outside 24-hour window)
+    if (messageTag && messageTag !== 'none') {
+      payload.messaging_type = 'MESSAGE_TAG'
+      payload.tag = messageTag
+    } else {
+      payload.messaging_type = 'RESPONSE'
+    }
+    
+    const response = await axios.post(
+      `${GRAPH_API_URL}/me/messages`,
+      payload,
+      {
+        params: { access_token: pageAccessToken }
+      }
+    )
+    
+    return response.data
+  }
+
+  async sendMessageToConversation(pageId: string, conversationId: string, message: string) {
     try {
       console.log('Sending message to conversation:', conversationId, 'page:', pageId)
       
@@ -101,7 +120,7 @@ export class FacebookClient {
       const pageAccessToken = page.access_token
       
       // Get the conversation to find the participant ID
-      const conversations = await this.getConversations(pageId)
+      const conversations = await this.getConversations(pageId, pageAccessToken)
       const conversation = conversations.find((conv: any) => conv.id === conversationId)
       
       if (!conversation) {
@@ -119,10 +138,11 @@ export class FacebookClient {
       
       // Send message using the correct endpoint and recipient
       const response = await axios.post(
-        `${GRAPH_API_URL}/${pageId}/messages`,
+        `${GRAPH_API_URL}/me/messages`,
         {
           recipient: { id: recipientId },
-          message: { text: message }
+          message: { text: message },
+          messaging_type: 'RESPONSE'
         },
         {
           params: { access_token: pageAccessToken }
@@ -137,10 +157,21 @@ export class FacebookClient {
     }
   }
 
+  async getPageInfo(pageId: string, pageAccessToken: string) {
+    const response = await axios.get(
+      `${GRAPH_API_URL}/${pageId}`,
+      {
+        params: {
+          access_token: pageAccessToken,
+          fields: 'id,name,category,fan_count,talking_about_count'
+        }
+      }
+    )
+    return response.data
+  }
+
   async getPageSubscribers(pageId: string) {
     try {
-      console.log('Getting subscribers for page:', pageId)
-      // First get the page access token
       const pages = await this.getPages()
       const page = pages.find((p: any) => p.id === pageId)
       
@@ -150,30 +181,22 @@ export class FacebookClient {
       
       const pageAccessToken = page.access_token
       
-      // Get users who messaged in last 24 hours (Facebook policy)
-      const response = await axios.get(
-        `${GRAPH_API_URL}/${pageId}/conversations`,
-        {
-          params: {
-            access_token: pageAccessToken,
-            fields: 'participants,updated_time'
-          }
+      // Get conversations as a proxy for subscribers
+      const conversations = await this.getConversations(pageId, pageAccessToken)
+      
+      // Extract unique participants
+      const subscribers = conversations.map((conv: any) => {
+        const participant = conv.participants?.data?.find((p: any) => p.id !== pageId)
+        return {
+          id: participant?.id,
+          name: participant?.name
         }
-      )
+      }).filter((sub: any) => sub.id)
       
-      const now = new Date()
-      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      
-      const recentConversations = response.data.data.filter((conv: any) => {
-        const updatedTime = new Date(conv.updated_time)
-        return updatedTime > dayAgo
-      })
-      
-      console.log('Recent conversations for subscribers:', recentConversations)
-      return recentConversations
+      return subscribers
     } catch (error) {
       console.error('Error getting page subscribers:', error)
-      throw error
+      return []
     }
   }
 }

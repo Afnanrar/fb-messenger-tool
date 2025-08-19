@@ -6,198 +6,194 @@ import {
   Users, 
   Send, 
   TrendingUp,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle
+  Activity,
+  Zap,
+  Target,
+  Award
 } from 'lucide-react'
-import Layout from '@/components/Layout'
 import { useRouter } from 'next/navigation'
-
-interface Stats {
-  totalMessages: number
-  totalLeads: number
-  activePages: number
-  campaignsToday: number
-  successRate: number
-  avgResponseTime: string
-}
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [stats, setStats] = useState<Stats>({
-    totalMessages: 6978507,
-    totalLeads: 45832,
-    activePages: 12,
-    campaignsToday: 8,
-    successRate: 98.5,
-    avgResponseTime: '2.3 min'
+  const [animatedNumbers, setAnimatedNumbers] = useState({
+    messages: 0,
+    leads: 0,
+    pages: 0,
+    campaigns: 0
   })
 
-  const recentActivity = [
-    { type: 'campaign', message: 'Bulk message campaign #495457 completed', time: '5 minutes ago', status: 'success' },
-    { type: 'page', message: 'New page "Gaming Slots" connected', time: '1 hour ago', status: 'info' },
-    { type: 'lead', message: '523 new leads added from "Spinners Lounge"', time: '2 hours ago', status: 'success' },
-    { type: 'campaign', message: 'Campaign #479126 failed - Rate limit exceeded', time: '3 hours ago', status: 'error' },
+  useEffect(() => {
+    // Animate numbers on mount
+    const targets = {
+      messages: 6978507,
+      leads: 45832,
+      pages: 12,
+      campaigns: 127
+    }
+    
+    const duration = 2000
+    const steps = 60
+    const increment = {
+      messages: targets.messages / steps,
+      leads: targets.leads / steps,
+      pages: targets.pages / steps,
+      campaigns: targets.campaigns / steps
+    }
+    
+    let current = 0
+    const timer = setInterval(() => {
+      current++
+      setAnimatedNumbers({
+        messages: Math.min(Math.floor(increment.messages * current), targets.messages),
+        leads: Math.min(Math.floor(increment.leads * current), targets.leads),
+        pages: Math.min(Math.floor(increment.pages * current), targets.pages),
+        campaigns: Math.min(Math.floor(increment.campaigns * current), targets.campaigns)
+      })
+      
+      if (current >= steps) clearInterval(timer)
+    }, duration / steps)
+    
+    return () => clearInterval(timer)
+  }, [])
+
+  const quickActions = [
+    {
+      title: 'Send Broadcast',
+      description: 'Reach all your audience instantly',
+      icon: Send,
+      color: 'from-purple-500 to-pink-500',
+      href: '/dashboard/broadcast'
+    },
+    {
+      title: 'View Analytics',
+      description: 'Track your performance metrics',
+      icon: TrendingUp,
+      color: 'from-blue-500 to-cyan-500',
+      href: '/dashboard/analytics'
+    },
+    {
+      title: 'Manage Pages',
+      description: 'Connect and manage Facebook pages',
+      icon: MessageSquare,
+      color: 'from-green-500 to-emerald-500',
+      href: '/dashboard/pages'
+    },
+    {
+      title: 'Lead Management',
+      description: 'Organize and segment your leads',
+      icon: Users,
+      color: 'from-orange-500 to-red-500',
+      href: '/dashboard/leads'
+    }
   ]
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 mt-1">Welcome back! Here's what's happening with your pages.</p>
+    <div className="min-h-screen bg-[#0a0e27] p-6">
+      {/* Floating Gradients */}
+      <div className="floating-gradient gradient-1"></div>
+      <div className="floating-gradient gradient-2"></div>
+      
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
+            Welcome Back to Command Center
+          </h1>
+          <p className="text-gray-400 mt-2">Your messaging empire at a glance</p>
         </div>
-
+        
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total Messages</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {stats.totalMessages.toLocaleString()}
-                </p>
-                <p className="text-green-500 text-sm mt-2 flex items-center">
-                  <TrendingUp size={16} className="mr-1" />
-                  +12.5% from last month
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="neon-border">
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                  <MessageSquare size={24} className="text-white" />
+                </div>
+                <Activity className="text-green-400" size={20} />
               </div>
-              <MessageSquare className="text-[#1d9bf0]" size={32} />
+              <p className="text-gray-400 text-sm">Total Messages</p>
+              <p className="text-3xl font-bold text-white mt-2">
+                {animatedNumbers.messages.toLocaleString()}
+              </p>
+              <div className="mt-3 flex items-center text-green-400 text-sm">
+                <TrendingUp size={16} className="mr-1" />
+                +12.5% from last month
+              </div>
             </div>
           </div>
-
-          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total Leads</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {stats.totalLeads.toLocaleString()}
-                </p>
-                <p className="text-green-500 text-sm mt-2 flex items-center">
-                  <TrendingUp size={16} className="mr-1" />
-                  +523 today
-                </p>
+          
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                <MessageSquare size={24} className="text-white" />
               </div>
-              <Users className="text-[#1d9bf0]" size={32} />
+              <Zap className="text-yellow-400" size={20} />
+            </div>
+            <p className="text-gray-400 text-sm">Total Leads</p>
+            <p className="text-3xl font-bold text-white mt-2">
+              {animatedNumbers.leads.toLocaleString()}
+            </p>
+            <div className="mt-3 flex items-center text-green-400 text-sm">
+                <TrendingUp size={16} className="mr-1" />
+                +523 today
+              </div>
+          </div>
+          
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+                <Target size={24} className="text-white" />
+              </div>
+              <Award className="text-purple-400" size={20} />
+            </div>
+            <p className="text-gray-400 text-sm">Active Pages</p>
+            <p className="text-3xl font-bold text-white mt-2">
+              {animatedNumbers.pages}
+            </p>
+            <div className="mt-3 text-gray-400 text-sm">
+              All systems operational
             </div>
           </div>
-
-          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Active Pages</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {stats.activePages}
-                </p>
-                <p className="text-gray-500 text-sm mt-2">
-                  All systems operational
-                </p>
+          
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                <Send size={24} className="text-white" />
               </div>
-              <CheckCircle className="text-green-500" size={32} />
+              <Activity className="text-blue-400" size={20} />
             </div>
-          </div>
-
-          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Success Rate</p>
-                <p className="text-3xl font-bold text-white mt-2">
-                  {stats.successRate}%
-                </p>
-                <p className="text-gray-500 text-sm mt-2">
-                  Avg response: {stats.avgResponseTime}
-                </p>
-              </div>
-              <Send className="text-[#1d9bf0]" size={32} />
+            <p className="text-gray-400 text-sm">Campaigns</p>
+            <p className="text-3xl font-bold text-white mt-2">
+              {animatedNumbers.campaigns}
+            </p>
+            <div className="mt-3 text-gray-400 text-sm">
+              98.5% success rate
             </div>
           </div>
         </div>
-
-        {/* Recent Activity and Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          <div className="bg-[#192734] rounded-lg border border-[#38444d]">
-            <div className="p-6 border-b border-[#38444d]">
-              <h2 className="text-xl font-bold text-white">Recent Activity</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.status === 'success' ? 'bg-green-500' :
-                    activity.status === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-300">{activity.message}</p>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center">
-                      <Clock size={12} className="mr-1" />
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-[#192734] rounded-lg border border-[#38444d]">
-            <div className="p-6 border-b border-[#38444d]">
-              <h2 className="text-xl font-bold text-white">Quick Actions</h2>
-            </div>
-            <div className="p-6 space-y-3">
+        
+        {/* Quick Actions */}
+        <h2 className="text-2xl font-bold text-white mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {quickActions.map((action, index) => {
+            const Icon = action.icon
+            return (
               <button
-                onClick={() => router.push('/dashboard/broadcast')}
-                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
+                key={index}
+                onClick={() => router.push(action.href)}
+                className="glass-card p-6 text-left hover:scale-105 transition-all duration-300 group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Send className="text-[#1d9bf0]" size={20} />
-                    <div>
-                      <p className="text-white font-medium">Send Bulk Message</p>
-                      <p className="text-xs text-gray-400">Reach all your leads instantly</p>
-                    </div>
-                  </div>
-                  <span className="text-gray-400">→</span>
+                <div className={`p-3 bg-gradient-to-br ${action.color} rounded-lg inline-block mb-4 group-hover:scale-110 transition-transform`}>
+                  <Icon size={24} className="text-white" />
                 </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{action.title}</h3>
+                <p className="text-sm text-gray-400">{action.description}</p>
               </button>
-
-              <button
-                onClick={() => router.push('/dashboard/pages')}
-                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <MessageSquare className="text-[#1d9bf0]" size={20} />
-                    <div>
-                      <p className="text-white font-medium">Manage Pages</p>
-                      <p className="text-xs text-gray-400">Connect or manage Facebook pages</p>
-                    </div>
-                  </div>
-                  <span className="text-gray-400">→</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => router.push('/dashboard/analytics')}
-                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <TrendingUp className="text-[#1d9bf0]" size={20} />
-                    <div>
-                      <p className="text-white font-medium">View Analytics</p>
-                      <p className="text-xs text-gray-400">Track your performance metrics</p>
-                    </div>
-                  </div>
-                  <span className="text-gray-400">→</span>
-                </div>
-              </button>
-            </div>
-          </div>
+            )
+          })}
         </div>
       </div>
-    </Layout>
+    </div>
   )
 }

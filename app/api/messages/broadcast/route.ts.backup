@@ -18,27 +18,20 @@ export async function POST(request: NextRequest) {
     const fbPageId = process.env.FACEBOOK_PAGE_ID || pageId
     
     if (!pageToken || !fbPageId) {
-      console.error('Missing environment variables:', { 
-        pageToken: !!pageToken, 
-        fbPageId: !!fbPageId 
-      })
       return NextResponse.json({ 
-        error: 'Page not configured. Please set FACEBOOK_PAGE_ACCESS_TOKEN and FACEBOOK_PAGE_ID in environment variables.',
+        error: 'Page not configured',
         success: false 
       }, { status: 400 })
     }
     
-    // Create Facebook client with page token (not user token)
     const fbClient = new FacebookClient(pageToken)
     
     // Get eligible recipients based on audience type
     let recipients = []
     
     try {
-      console.log('Fetching conversations for page:', fbPageId)
       // Get conversations from Facebook
       const conversations = await fbClient.getConversations(fbPageId, pageToken)
-      console.log('Found conversations:', conversations.length)
       
       // Filter based on 24-hour policy
       const now = new Date()
@@ -47,28 +40,12 @@ export async function POST(request: NextRequest) {
       recipients = conversations.filter((conv: any) => {
         const lastInteraction = new Date(conv.updated_time)
         return lastInteraction > dayAgo
-      }).map((conv: any) => {
-        const participant = conv.participants?.data?.find((p: any) => p.id !== fbPageId)
-        return {
-          id: participant?.id,
-          name: participant?.name || 'User'
-        }
-      }).filter((r: any) => r.id)
-      
-      console.log('Eligible recipients:', recipients.length)
-    } catch (error: any) {
-      console.error('Error fetching recipients:', error.message)
-      return NextResponse.json({ 
-        error: `Failed to fetch recipients: ${error.message}`,
-        success: false 
-      }, { status: 500 })
-    }
-    
-    if (recipients.length === 0) {
-      return NextResponse.json({ 
-        error: 'No eligible recipients found. Make sure you have recent conversations within 24 hours.',
-        success: false 
-      }, { status: 400 })
+      }).map((conv: any) => ({
+        id: conv.participants?.data?.find((p: any) => p.id !== fbPageId)?.id,
+        name: conv.participants?.data?.find((p: any) => p.id !== fbPageId)?.name
+      })).filter((r: any) => r.id)
+    } catch (error) {
+      console.error('Error fetching recipients:', error)
     }
     
     // Create broadcast record (simplified for now)
@@ -90,16 +67,12 @@ export async function POST(request: NextRequest) {
     let failedCount = 0
     const results = []
     
-    console.log(`Starting broadcast to ${recipients.length} recipients`)
-    
     for (const recipient of recipients) {
       // Process spintax and personalize message
       let personalizedMessage = processSpintax(message)
       personalizedMessage = personalizedMessage.replace('%(name)s', recipient.name || 'there')
       
       try {
-        console.log(`Sending to ${recipient.id} (${recipient.name}): ${personalizedMessage.substring(0, 50)}...`)
-        
         // Send message with proper message tag
         const response = await fbClient.sendMessage(
           recipient.id,
@@ -112,17 +85,14 @@ export async function POST(request: NextRequest) {
         sentCount++
         results.push({ 
           recipient_id: recipient.id, 
-          status: 'sent',
-          response: response
+          status: 'sent' 
         })
-        
-        console.log(`✓ Sent to ${recipient.id}`)
         
         // Rate limiting - Facebook allows 200 msgs/sec but let's be safe
         await new Promise(resolve => setTimeout(resolve, 50))
         
       } catch (error: any) {
-        console.error(`✗ Failed to send to ${recipient.id}:`, error.message)
+        console.error(`Failed to send to ${recipient.id}:`, error)
         
         failedCount++
         results.push({ 
@@ -132,8 +102,6 @@ export async function POST(request: NextRequest) {
         })
       }
     }
-    
-    console.log(`Broadcast completed. Sent: ${sentCount}, Failed: ${failedCount}`)
     
     return NextResponse.json({
       success: true,

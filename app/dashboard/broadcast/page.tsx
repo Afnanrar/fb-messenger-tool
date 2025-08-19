@@ -91,7 +91,6 @@ export default function BroadcastPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pageId: process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID,
           message,
           messageTag,
           scheduled: scheduling,
@@ -366,7 +365,7 @@ export default function BroadcastPage() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Content</th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase">Total</th>
                   <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase">Sent</th>
-                  <th className="px-6 py-4 text-center text-gray-400 uppercase">Failed</th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase">Failed</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">Created</th>
                 </tr>
               </thead>
@@ -445,7 +444,7 @@ export default function BroadcastPage() {
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-400">
                           {new Date(campaign.created_at).toLocaleString()}
-                        </span>
+                          </span>
                       </td>
                     </tr>
                   ))

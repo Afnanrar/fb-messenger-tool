@@ -5,6 +5,7 @@ import { ConversationList } from '@/components/dashboard/ConversationList'
 import { MessageThread } from '@/components/dashboard/MessageThread'
 import { MessageInput } from '@/components/dashboard/MessageInput'
 import { PageSelector } from '@/components/dashboard/PageSelector'
+import Layout from '@/components/Layout'
 
 interface Conversation {
   id: string
@@ -222,103 +223,105 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Inbox</h1>
-            <p className="text-sm text-gray-600">Manage your conversations</p>
-          </div>
-          <PageSelector
-            onPageSelect={handlePageSelect}
-            selectedPage={selectedPage || undefined}
-          />
-        </div>
-      </div>
-
-      {/* Success/Error Display */}
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-md mx-4 mt-4">
-          <p className="text-green-800 text-sm">{success}</p>
-        </div>
-      )}
-      
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md mx-4 mt-4">
-          <p className="text-red-800 text-sm">{error}</p>
-          <button
-            onClick={fetchConversations}
-            className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Conversation List */}
-        <div className="w-1/3 border-r border-gray-200 bg-white">
-          {loading ? (
-            <div className="p-4 text-center text-gray-500">Loading conversations...</div>
-          ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              {selectedPage ? 'No conversations found for this page' : 'Please select a page first'}
+    <Layout>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-[#38444d] bg-[#192734]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-white">Inbox</h1>
+              <p className="text-sm text-gray-400">Manage your conversations</p>
             </div>
-          ) : (
-            <ConversationList
-              conversations={conversations}
-              selectedId={selectedConversation?.id}
-              onSelect={setSelectedConversation}
+            <PageSelector
+              onPageSelect={handlePageSelect}
+              selectedPage={selectedPage || undefined}
             />
-          )}
+          </div>
         </div>
+
+        {/* Success/Error Display */}
+        {success && (
+          <div className="p-4 bg-green-900/20 border border-green-800 rounded-md mx-4 mt-4">
+            <p className="text-green-400 text-sm">{success}</p>
+          </div>
+        )}
         
-        {/* Message Thread */}
-        <div className="flex-1 flex flex-col bg-gray-50">
-          {selectedConversation ? (
-            <>
-              {/* Conversation Header */}
-              <div className="p-4 bg-white border-b border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">
-                      {getInitials(selectedConversation.participant_id)}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {selectedConversation.participant_id || 'Unknown User'}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {selectedConversation.pages?.name || 'Unknown Page'}
-                    </p>
-                  </div>
-                </div>
+        {error && (
+          <div className="p-4 bg-red-900/20 border border-red-800 rounded-md mx-4 mt-4">
+            <p className="text-red-400 text-sm">{error}</p>
+            <button
+              onClick={fetchConversations}
+              className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Conversation List */}
+          <div className="w-1/3 border-r border-[#38444d] bg-[#192734]">
+            {loading ? (
+              <div className="p-4 text-center text-gray-400">Loading conversations...</div>
+            ) : conversations.length === 0 ? (
+              <div className="p-4 text-center text-gray-400">
+                {selectedPage ? 'No conversations found for this page' : 'Please select a page first'}
               </div>
-              
-              <MessageThread 
-                messages={messages} 
-                currentPageId={selectedPage?.id}
-                onRefresh={refreshMessages}
-                loading={refreshing}
+            ) : (
+              <ConversationList
+                conversations={conversations}
+                selectedId={selectedConversation?.id}
+                onSelect={setSelectedConversation}
               />
-              <MessageInput onSend={sendMessage} disabled={sending} />
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">💬</span>
+            )}
+          </div>
+          
+          {/* Message Thread */}
+          <div className="flex-1 flex flex-col bg-[#0f1419]">
+            {selectedConversation ? (
+              <>
+                {/* Conversation Header */}
+                <div className="p-4 bg-[#192734] border-b border-[#38444d]">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-[#1d9bf0] rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-white">
+                        {getInitials(selectedConversation.participant_id)}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-white">
+                        {selectedConversation.participant_id || 'Unknown User'}
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        {selectedConversation.pages?.name || 'Unknown Page'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-lg font-medium">Select a conversation</p>
-                <p className="text-sm">Choose a conversation from the list to start messaging</p>
+                
+                <MessageThread 
+                  messages={messages} 
+                  currentPageId={selectedPage?.id}
+                  onRefresh={refreshMessages}
+                  loading={refreshing}
+                />
+                <MessageInput onSend={sendMessage} disabled={sending} />
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-[#192734] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">💬</span>
+                  </div>
+                  <p className="text-lg font-medium">Select a conversation</p>
+                  <p className="text-sm">Choose a conversation from the list to start messaging</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }

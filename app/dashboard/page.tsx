@@ -1,211 +1,203 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PageSelector } from '@/components/dashboard/PageSelector'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare, Send, Users, TrendingUp } from 'lucide-react'
+import { 
+  MessageSquare, 
+  Users, 
+  Send, 
+  TrendingUp,
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle
+} from 'lucide-react'
+import Layout from '@/components/Layout'
+import { useRouter } from 'next/navigation'
 
-interface Page {
-  id: string
-  name: string
-  category: string
-}
-
-interface DashboardStats {
-  totalConversations: number
+interface Stats {
   totalMessages: number
-  unreadCount: number
+  totalLeads: number
   activePages: number
+  campaignsToday: number
+  successRate: number
+  avgResponseTime: string
 }
 
 export default function DashboardPage() {
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null)
-  const [stats, setStats] = useState<DashboardStats>({
-    totalConversations: 0,
-    totalMessages: 0,
-    unreadCount: 0,
-    activePages: 0
+  const router = useRouter()
+  const [stats, setStats] = useState<Stats>({
+    totalMessages: 6978507,
+    totalLeads: 45832,
+    activePages: 12,
+    campaignsToday: 8,
+    successRate: 98.5,
+    avgResponseTime: '2.3 min'
   })
 
-  useEffect(() => {
-    if (selectedPage) {
-      fetchStats(selectedPage.id)
-    }
-  }, [selectedPage])
-
-  const fetchStats = async (pageId: string) => {
-    try {
-      // In a real app, you'd have an API endpoint for stats
-      // For now, we'll use mock data
-      setStats({
-        totalConversations: Math.floor(Math.random() * 100) + 50,
-        totalMessages: Math.floor(Math.random() * 500) + 200,
-        unreadCount: Math.floor(Math.random() * 20) + 5,
-        activePages: 1
-      })
-    } catch (error) {
-      console.error('Error fetching stats:', error)
-    }
-  }
+  const recentActivity = [
+    { type: 'campaign', message: 'Bulk message campaign #495457 completed', time: '5 minutes ago', status: 'success' },
+    { type: 'page', message: 'New page "Gaming Slots" connected', time: '1 hour ago', status: 'info' },
+    { type: 'lead', message: '523 new leads added from "Spinners Lounge"', time: '2 hours ago', status: 'success' },
+    { type: 'campaign', message: 'Campaign #479126 failed - Rate limit exceeded', time: '3 hours ago', status: 'error' },
+  ]
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Manage your Facebook Messenger presence</p>
+          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+          <p className="text-gray-400 mt-1">Welcome back! Here's what's happening with your pages.</p>
         </div>
-        
-        <PageSelector
-          onPageSelect={setSelectedPage}
-          selectedPage={selectedPage || undefined}
-        />
-      </div>
 
-      {selectedPage ? (
-        <>
-          {/* Page Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <span>{selectedPage.name}</span>
-                <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  {selectedPage.category}
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Messages</p>
+                <p className="text-3xl font-bold text-white mt-2">
+                  {stats.totalMessages.toLocaleString()}
+                </p>
+                <p className="text-green-500 text-sm mt-2 flex items-center">
+                  <TrendingUp size={16} className="mr-1" />
+                  +12.5% from last month
+                </p>
+              </div>
+              <MessageSquare className="text-[#1d9bf0]" size={32} />
+            </div>
+          </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Conversations</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalConversations}</p>
+          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Leads</p>
+                <p className="text-3xl font-bold text-white mt-2">
+                  {stats.totalLeads.toLocaleString()}
+                </p>
+                <p className="text-green-500 text-sm mt-2 flex items-center">
+                  <TrendingUp size={16} className="mr-1" />
+                  +523 today
+                </p>
+              </div>
+              <Users className="text-[#1d9bf0]" size={32} />
+            </div>
+          </div>
+
+          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Active Pages</p>
+                <p className="text-3xl font-bold text-white mt-2">
+                  {stats.activePages}
+                </p>
+                <p className="text-gray-500 text-sm mt-2">
+                  All systems operational
+                </p>
+              </div>
+              <CheckCircle className="text-green-500" size={32} />
+            </div>
+          </div>
+
+          <div className="bg-[#192734] rounded-lg p-6 border border-[#38444d]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Success Rate</p>
+                <p className="text-3xl font-bold text-white mt-2">
+                  {stats.successRate}%
+                </p>
+                <p className="text-gray-500 text-sm mt-2">
+                  Avg response: {stats.avgResponseTime}
+                </p>
+              </div>
+              <Send className="text-[#1d9bf0]" size={32} />
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity and Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activity */}
+          <div className="bg-[#192734] rounded-lg border border-[#38444d]">
+            <div className="p-6 border-b border-[#38444d]">
+              <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className={`w-2 h-2 rounded-full mt-2 ${
+                    activity.status === 'success' ? 'bg-green-500' :
+                    activity.status === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                  }`} />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-300">{activity.message}</p>
+                    <p className="text-xs text-gray-500 mt-1 flex items-center">
+                      <Clock size={12} className="mr-1" />
+                      {activity.time}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Send className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Messages</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalMessages}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Unread</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.unreadCount}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Active Pages</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.activePages}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <a
-                  href="/dashboard/inbox"
-                  className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
+          <div className="bg-[#192734] rounded-lg border border-[#38444d]">
+            <div className="p-6 border-b border-[#38444d]">
+              <h2 className="text-xl font-bold text-white">Quick Actions</h2>
+            </div>
+            <div className="p-6 space-y-3">
+              <button
+                onClick={() => router.push('/dashboard/broadcast')}
+                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <MessageSquare className="w-5 h-5 text-blue-600" />
+                    <Send className="text-[#1d9bf0]" size={20} />
                     <div>
-                      <p className="font-medium text-gray-900">View Inbox</p>
-                      <p className="text-sm text-gray-600">Check your conversations</p>
+                      <p className="text-white font-medium">Send Bulk Message</p>
+                      <p className="text-xs text-gray-400">Reach all your leads instantly</p>
                     </div>
                   </div>
-                </a>
-                
-                <a
-                  href="/dashboard/broadcast"
-                  className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Send className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">Send Broadcast</p>
-                      <p className="text-sm text-gray-600">Message multiple users</p>
-                    </div>
-                  </div>
-                </a>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-600">New message from John Doe</span>
-                    <span className="text-gray-400">2 min ago</span>
-                  </div>
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">Broadcast sent to 45 recipients</span>
-                    <span className="text-gray-400">1 hour ago</span>
-                  </div>
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-gray-600">Page access token refreshed</span>
-                    <span className="text-gray-400">3 hours ago</span>
-                  </div>
+                  <span className="text-gray-400">→</span>
                 </div>
-              </CardContent>
-            </Card>
+              </button>
+
+              <button
+                onClick={() => router.push('/dashboard/pages')}
+                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <MessageSquare className="text-[#1d9bf0]" size={20} />
+                    <div>
+                      <p className="text-white font-medium">Manage Pages</p>
+                      <p className="text-xs text-gray-400">Connect or manage Facebook pages</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400">→</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => router.push('/dashboard/analytics')}
+                className="w-full text-left p-4 bg-[#273340] hover:bg-[#38444d] rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="text-[#1d9bf0]" size={20} />
+                    <div>
+                      <p className="text-white font-medium">View Analytics</p>
+                      <p className="text-xs text-gray-400">Track your performance metrics</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400">→</span>
+                </div>
+              </button>
+            </div>
           </div>
-        </>
-      ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Page Selected</h3>
-            <p className="text-gray-600">Please select a Facebook page to view your dashboard</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        </div>
+      </div>
+    </Layout>
   )
 }
